@@ -2,8 +2,9 @@ package com.matheus.mota.nexus.api.controller;
 
 import com.matheus.mota.nexus.common.ProblemDetails;
 import com.matheus.mota.nexus.common.exception.*;
-import com.matheus.mota.nexus.common.util.ExceptionUtil;
+import com.matheus.mota.nexus.common.strategy.ExceptionHandlerComposite;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.convert.ConversionFailedException;
@@ -17,11 +18,14 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @ControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
 
     private static final String BAD_AUTHENTICATION = "Invalid authentication credentials";
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private final ExceptionHandlerComposite composite;
 
     @ExceptionHandler({
             MethodArgumentTypeMismatchException.class,
@@ -42,7 +46,7 @@ public class GlobalExceptionHandler {
             NotFollowingUserException.class
     })
     public ResponseEntity<ProblemDetails> handleBusinessException(Exception ex, HttpServletRequest req) {
-        ProblemDetails detail = ExceptionUtil.getProblemDetails(req, ex);
+        ProblemDetails detail = composite.resolve(ex, req);
         log.warn("Handled business exception: {} - URI: {} - Message: {}", ex.getClass().getSimpleName(), req.getRequestURI(), ex.getMessage());
         return ResponseEntity.status(detail.code()).body(detail);
     }
